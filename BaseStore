@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="ckb" dir="rtl" id="htmlRoot">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Base Store | Official Store</title>
+    
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%232b040d' stroke='%23800020' stroke-width='6'/><text x='50' y='65' font-size='42' font-weight='900' fill='%23ff2a4b' text-anchor='middle'>BS</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase SDKs Integration -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, onSnapshot, setDoc, getDoc, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyACK6eIhr21aKJvUVa2fz75f2fpgq9i7KQ",
+            authDomain: "basestore0.firebaseapp.com",
+            projectId: "basestore0",
+            storageBucket: "basestore0.firebasestorage.app",
+            messagingSenderId: "599103600152",
+            appId: "1:599103600152:web:839ead1e635343c1f2756d",
+            measurementId: "G-LLQRJ9DHJV"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.db = db;
+        window.collection = collection;
+        window.addDoc = addDoc;
+        window.getDocs = getDocs;
+        window.deleteDoc = deleteDoc;
+        window.doc = doc;
+        window.updateDoc = updateDoc;
+        window.setDoc = setDoc;
+        window.getDoc = getDoc;
+        window.increment = increment;
+        window.onSnapshot = onSnapshot;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initFirebaseRealtime();
+            trackSiteVisit();
+            checkSavedUserSession();
+        });
+    </script>
+    
+    <style>
+        :root {
+            --bg-main: #0c0205;
+            --bg-center: #2b040d;
+            --card-bg: rgba(35, 6, 14, 0.88);
+            --burgundy-primary: #800020;
+            --burgundy-light: #b0002d;
+            --accent-red: #ff2a4b;
+            --text-main: #f8fafc;
+            --text-muted: #fda4af;
+            --border-color: rgba(255, 255, 255, 0.18);
+            --whatsapp-green: #25d366;
+            --discord-blurple: #5865F2;
+            --header-bg: rgba(18, 3, 7, 0.95);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Vazirmatn', sans-serif; }
+
+        body {
+            background: radial-gradient(circle at 50% 12%, var(--bg-center) 0%, var(--bg-main) 80%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            direction: rtl;
+            min-height: 100vh;
+            padding-bottom: 90px;
+        }
+
+        /* Top Left Toast Notification Container */
+        #topToastContainer {
+            position: fixed; top: 15px; left: 15px; z-index: 9999;
+            display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+        }
+        .toast-notification {
+            background: rgba(18, 3, 7, 0.95); border: 1px solid #4ade80; border-radius: 12px;
+            padding: 10px 14px; color: #fff; font-size: 0.8rem; box-shadow: 0 5px 20px rgba(0,0,0,0.6);
+            display: flex; align-items: center; gap: 10px; pointer-events: auto; animation: slideInLeft 0.3s ease;
+            backdrop-filter: blur(10px); max-width: 300px;
+        }
+        @keyframes slideInLeft {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .promo-bar {
+            background: linear-gradient(90deg, #4a0011, #800020, #b0002d);
+            color: #fff; padding: 6px 12px; font-size: 0.75rem; font-weight: bold;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        header {
+            background-color: var(--header-bg); backdrop-filter: blur(16px);
+            position: sticky; top: 0; z-index: 100; border-bottom: 1px solid var(--border-color);
+            padding: 0.8rem 1.2rem; display: flex; justify-content: space-between; align-items: center; gap: 10px;
+        }
+
+        .logo-container { display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
+        
+        .logo-icon-badge {
+            width: 42px; height: 42px; border-radius: 12px;
+            background: linear-gradient(135deg, #800020 0%, #1a0208 100%);
+            border: 2px solid #b0002d; display: flex; align-items: center; justify-content: center;
+            font-weight: 900; font-size: 1.15rem; color: #ff2a4b; 
+            box-shadow: 0 0 15px rgba(176, 0, 45, 0.6), inset 0 0 8px rgba(255, 42, 75, 0.3);
+            letter-spacing: -1px;
+        }
+        .logo-text { font-size: 1.35rem; font-weight: 900; color: var(--text-main); }
+        .logo-text span { color: var(--accent-red); }
+
+        .search-bar { flex: 1; max-width: 350px; position: relative; margin: 0 10px; }
+        .search-bar input {
+            width: 100%; padding: 0.65rem 1rem 0.65rem 2.5rem; background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border-color); border-radius: 20px; color: var(--text-main);
+            outline: none; font-size: 0.85rem;
+        }
+        .search-bar i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+
+        .header-actions { display: flex; gap: 8px; align-items: center; }
+        .header-btn {
+            background: rgba(255,255,255,0.08); border: 1px solid var(--border-color);
+            color: var(--text-main); padding: 0.45rem 0.75rem; border-radius: 12px;
+            font-size: 0.78rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 5px;
+        }
+
+        .pills-bar {
+            display: flex; gap: 8px; overflow-x: auto; padding: 0.8rem 1rem;
+            scrollbar-width: none; margin-bottom: 1rem;
+        }
+        .pills-bar::-webkit-scrollbar { display: none; }
+        
+        .pill-btn {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid var(--border-color);
+            color: #fff !important;
+            padding: 0.55rem 1.2rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            white-space: nowrap;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.25s ease-in-out;
+            outline: none;
+        }
+
+        .pill-playstation:hover, .pill-playstation.active { border-color: #3b82f6 !important; box-shadow: 0 0 15px #3b82f6, inset 0 0 8px #3b82f6 !important; color: #60a5fa !important; }
+        .pill-xbox:hover, .pill-xbox.active { border-color: #22c55e !important; box-shadow: 0 0 15px #22c55e, inset 0 0 8px #22c55e !important; color: #4ade80 !important; }
+        .pill-cards:hover, .pill-cards.active { border-color: #facc15 !important; box-shadow: 0 0 15px #facc15, inset 0 0 8px #facc15 !important; color: #facc15 !important; }
+        .pill-mobile:hover, .pill-mobile.active { border-color: #cbd5e1 !important; box-shadow: 0 0 15px #cbd5e1, inset 0 0 8px #cbd5e1 !important; color: #e2e8f0 !important; }
+        .pill-pc:hover, .pill-pc.active { border-color: #b0002d !important; box-shadow: 0 0 15px #b0002d, inset 0 0 8px #b0002d !important; color: #ff2a4b !important; }
+        .pill-subscriptions:hover, .pill-subscriptions.active { border-color: #facc15 !important; box-shadow: 0 0 16px #ef4444, 0 0 8px #facc15, inset 0 0 8px #ef4444 !important; color: #facc15 !important; }
+        .pill-all:hover, .pill-all.active { border-color: #ffffff !important; box-shadow: 0 0 15px #ffffff, inset 0 0 8px #ffffff !important; color: #ffffff !important; }
+
+        .spotlight-banner {
+            position: relative; border-radius: 20px; overflow: hidden;
+            border: 1px solid var(--border-color); margin: 0 1rem 1.5rem 1rem;
+            height: 200px; background: #000; box-shadow: 0 8px 25px rgba(128, 0, 32, 0.4);
+            user-select: none;
+        }
+        @media (min-width: 768px) { .spotlight-banner { height: 340px; } }
+        
+        .spotlight-slide {
+            position: absolute; inset: 0; opacity: 0; transition: opacity 0.6s ease-in-out;
+            display: flex; align-items: flex-end; pointer-events: none; justify-content: center;
+        }
+        .spotlight-slide.active { opacity: 1; z-index: 2; pointer-events: auto; }
+        .spotlight-media { 
+            position: absolute; inset: 0; width: 100%; height: 100%; 
+            object-fit: contain; background-color: #050103; opacity: 0.95; 
+        }
+
+        .slider-btn {
+            position: absolute; top: 50%; transform: translateY(-50%); z-index: 10;
+            background: rgba(0,0,0,0.6); color: #fff; border: 1px solid var(--border-color);
+            width: 36px; height: 36px; border-radius: 50%; cursor: pointer; display: flex;
+            align-items: center; justify-content: center; backdrop-filter: blur(4px);
+            transition: all 0.2s ease;
+        }
+        .slider-btn:hover { background: var(--burgundy-light); border-color: var(--accent-red); }
+        .slider-btn.prev { right: 12px; }
+        .slider-btn.next { left: 12px; }
+
+        .slider-dots {
+            position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); z-index: 10;
+            display: flex; gap: 6px;
+        }
+        .slider-dot {
+            width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.4);
+            cursor: pointer; transition: all 0.3s ease;
+        }
+        .slider-dot.active { background: var(--accent-red); width: 22px; border-radius: 10px; }
+
+        .banner-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 0 1rem; margin-bottom: 2rem; }
+        .banner-card {
+            border-radius: 14px; padding: 1rem; height: 100px; display: flex; flex-direction: column;
+            justify-content: space-between; background-size: cover; position: relative; border: 1px solid var(--border-color); cursor: pointer;
+            overflow: hidden; transition: all 0.3s ease;
+        }
+        .banner-card::before { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,0.5); border-radius: 14px; }
+        .banner-card * { position: relative; z-index: 2; font-weight: bold; }
+
+        .banner-card.banner-ps:hover { transform: translateY(-3px); border-color: #3b82f6; box-shadow: 0 0 20px #3b82f6, inset 0 0 10px #3b82f6; }
+        .banner-card.banner-xbox:hover { transform: translateY(-3px); border-color: #22c55e; box-shadow: 0 0 20px #22c55e, inset 0 0 10px #22c55e; }
+        .banner-card.banner-pc:hover { transform: translateY(-3px); border-color: #b0002d; box-shadow: 0 0 20px #b0002d, inset 0 0 10px #b0002d; }
+        .banner-card.banner-mobile:hover { transform: translateY(-3px); border-color: #cbd5e1; box-shadow: 0 0 20px #cbd5e1, inset 0 0 10px #cbd5e1; }
+
+        .section-header { display: flex; justify-content: space-between; align-items: center; padding: 0 1rem; margin-bottom: 1rem; }
+        .section-title { font-size: 1.15rem; font-weight: 900; color: #facc15; }
+
+        .games-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 0 1rem; margin-bottom: 2rem; }
+        @media (min-width: 768px) { .games-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); } }
+
+        .game-card {
+            background: var(--card-bg); border-radius: 16px; overflow: hidden;
+            border: 1px solid var(--border-color); display: flex; flex-direction: column;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4); transition: all 0.3s ease; position: relative;
+        }
+        .game-card:hover { border-color: var(--accent-red); transform: translateY(-4px); box-shadow: 0 0 18px rgba(176, 0, 45, 0.5); }
+        .game-img-wrapper { position: relative; width: 100%; height: 135px; cursor: pointer; }
+        .game-img { width: 100%; height: 100%; object-fit: cover; }
+        .game-info { padding: 0.8rem; display: flex; flex-direction: column; flex: 1; }
+        .game-title { font-size: 0.9rem; font-weight: 700; margin-bottom: 0.4rem; color: #fff; }
+        .price { font-size: 0.95rem; font-weight: 900; color: #4ade80; }
+        .old-price-strike { font-size: 0.75rem; color: #ef4444; text-decoration: line-through; margin-right: 4px; }
+
+        .stock-badge {
+            position: absolute; top: 8px; right: 8px; z-index: 5;
+            background: rgba(0,0,0,0.75); padding: 3px 8px; border-radius: 6px;
+            font-size: 0.7rem; font-weight: bold; border: 1px solid var(--border-color); backdrop-filter: blur(4px);
+        }
+        
+        .wishlist-btn {
+            position: absolute; top: 8px; left: 8px; z-index: 5;
+            background: rgba(0,0,0,0.6); border: 1px solid var(--border-color);
+            color: #fff; width: 30px; height: 30px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+            backdrop-filter: blur(4px); transition: all 0.2s;
+        }
+        .wishlist-btn:hover, .wishlist-btn.active { color: var(--accent-red); border-color: var(--accent-red); background: rgba(128,0,32,0.3); }
+
+        .external-variants { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+        .mini-variant-chip { background: rgba(255,255,255,0.07); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 6px; font-size: 0.65rem; color: #ccc; }
+
+        .floating-whatsapp {
+            position: fixed; bottom: 75px; left: 20px; z-index: 180;
+            background: var(--whatsapp-green); color: #000; width: 50px; height: 50px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; box-shadow: 0 4px 15px rgba(37,211,102,0.5); text-decoration: none;
+            transition: transform 0.3s ease;
+        }
+        .floating-whatsapp:hover { transform: scale(1.1); }
+
+        footer { background: rgba(10, 2, 5, 0.9); border-top: 1px solid var(--border-color); padding: 2rem 1rem; margin-top: 3rem; text-align: center; }
+
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            background: rgba(18, 3, 7, 0.96); backdrop-filter: blur(20px);
+            border-top: 1px solid var(--border-color); display: flex; justify-content: space-around;
+            padding: 0.6rem 0; z-index: 200;
+        }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text-muted); text-decoration: none; font-size: 0.7rem; font-weight: 700; background: none; border: none; cursor: pointer; }
+        .nav-item.active { color: var(--accent-red); }
+
+        .sidebar {
+            position: fixed; top: 0; right: -100%; width: 380px; max-width: 100%; height: 100%;
+            background: var(--header-bg); backdrop-filter: blur(20px); border-left: 1px solid var(--border-color);
+            z-index: 250; transition: right 0.35s ease; display: flex; flex-direction: column;
+        }
+        .sidebar-header { padding: 1.2rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .sidebar-body { flex: 1; overflow-y: auto; padding: 1.2rem; }
+
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85);
+            z-index: 300; display: none; justify-content: center; align-items: center; padding: 1rem; backdrop-filter: blur(10px);
+        }
+        .modal.show { display: flex; }
+        .modal-content {
+            background: var(--header-bg); border: 1px solid var(--border-color); border-radius: 24px;
+            width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; padding: 1.8rem; position: relative;
+        }
+
+        .format-option-card {
+            background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 14px;
+            padding: 12px 16px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;
+            cursor: pointer; transition: all 0.25s ease;
+        }
+        .format-option-card:hover, .format-option-card.selected {
+            border-color: #10b981; background: rgba(16,185,129,0.08); box-shadow: 0 0 15px rgba(16,185,129,0.2);
+        }
+        .format-option-left { display: flex; align-items: center; gap: 12px; }
+        .format-icon-box {
+            width: 38px; height: 38px; border-radius: 10px; background: rgba(255,255,255,0.06);
+            display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: #10b981;
+        }
+        .format-title { font-weight: 800; font-size: 0.95rem; color: #fff; }
+        .format-subtitle { font-size: 0.72rem; color: #aaa; }
+        .format-option-right { text-align: left; }
+        .format-price { font-weight: 900; color: #fff; font-size: 0.95rem; }
+
+        .info-box {
+            background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 12px;
+            padding: 10px 14px; margin: 12px 0; font-size: 0.85rem;
+        }
+        .info-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { color: #aaa; }
+        .info-value { color: #fff; font-weight: bold; }
+
+        .admin-form-group { margin-bottom: 0.9rem; }
+        .admin-form-group label { display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.3rem; }
+        .admin-form-group input, .admin-form-group select, .admin-form-group textarea {
+            width: 100%; padding: 0.65rem; background: rgba(0,0,0,0.5); border: 1px solid var(--border-color); border-radius: 10px; color: #fff; outline: none;
+        }
+        .admin-submit-btn { width: 100%; background: var(--burgundy-light); color: #fff; border: 1px solid var(--accent-red); padding: 0.8rem; border-radius: 12px; font-weight: 700; cursor: pointer; }
+        .admin-tab-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; white-space: nowrap; }
+        .admin-tab-btn.active { background: var(--burgundy-light); border-color: var(--accent-red); }
+
+        .stat-card {
+            background: rgba(255,255,255,0.04); border: 1px solid var(--border-color); border-radius: 12px;
+            padding: 1rem; text-align: center; margin-bottom: 10px;
+        }
+        .stat-number { font-size: 1.5rem; font-weight: 900; color: #4ade80; margin-top: 5px; }
+
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 150; display: none; }
+        .overlay.show { display: block; }
+    </style>
+</head>
+<body>
+
+    <!-- Top Left Toast Notification Container -->
+    <div id="topToastContainer"></div>
+
+    <a href="https://wa.me/9647507285645" target="_blank" class="floating-whatsapp" title="پشتیوانی واتسئاپ">
+        <i class="fa-brands fa-whatsapp"></i>
+    </a>
+
+    <div class="promo-bar">
+        <span>⚡ BASE STORE OFFICIAL (Multi-Source Unlimited Variants & Cloud Sync)</span>
+        <span style="font-size:0.7rem; color:#4ade80;">● Online Firebase Connected</span>
+    </div>
+
+    <header>
+        <div class="logo-container" onclick="location.reload()">
+            <div class="logo-icon-badge">BS</div>
+            <div class="logo-text">Base <span id="secretTrigger" onclick="handleSecretClick(event)">S</span>tore</div>
+        </div>
+
+        <div class="search-bar">
+            <input type="text" id="searchInput" oninput="filterSearch()" placeholder="گەڕان بۆ یاری، کارت، UC...">
+            <i class="fa-solid fa-magnifying-glass"></i>
+        </div>
+
+        <div class="header-actions">
+            <button class="header-btn" onclick="openModal('authModal')" id="userAuthBtn">
+                <i class="fa-solid fa-user-circle"></i> <span id="authBtnText">چوونەژوورەوە</span>
+            </button>
+            <button class="header-btn" onclick="openModal('currencyModal')">
+                <i class="fa-solid fa-globe"></i> <span id="currentCurrencyLabel">IQD</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="pills-bar" id="pillsBarContainer"></div>
+
+    <div class="spotlight-banner" id="spotlightCarouselContainer"></div>
+
+    <div class="banner-grid" id="mainBanners">
+        <div class="banner-card banner-xbox" style="background-image: linear-gradient(135deg, #107c10, #032003);" onclick="setQuickFilter('xbox')">
+            <span>XBOX</span><span style="font-size:0.75rem; color:#4ade80;">ئێکسبۆکس ➔</span>
+        </div>
+        <div class="banner-card banner-ps" style="background-image: linear-gradient(135deg, #00439c, #00112c);" onclick="setQuickFilter('playstation')">
+            <span>PLAYSTATION</span><span style="font-size:0.75rem; color:#60a5fa;">پلەیستێشن ➔</span>
+        </div>
+        <div class="banner-card banner-mobile" style="background-image: linear-gradient(135deg, #475569, #0f172a);" onclick="setQuickFilter('mobile')">
+            <span>مۆبایل</span><span style="font-size:0.75rem; color:#e2e8f0;">یارییەکانی مۆبایل ➔</span>
+        </div>
+        <div class="banner-card banner-pc" style="background-image: linear-gradient(135deg, #4a0011, #000000);" onclick="setQuickFilter('pc')">
+            <span>PC GAMES</span><span style="font-size:0.75rem; color:#ff2a4b;">یارییەکانی PC ➔</span>
+        </div>
+    </div>
+
+    <div class="section-header" id="secHeader1"><h3 class="section-title">سەبسکرایبشنەکان (Subscriptions) ➔</h3></div>
+    <div class="games-grid" id="subscriptionsGrid"></div>
+
+    <div class="section-header" id="secHeader2"><h3 class="section-title">پڕفرۆشترین یاری و خزمەتگوزارییەکان ➔</h3></div>
+    <div class="games-grid" id="gamesGrid"></div>
+
+    <footer>
+        <div style="display:flex; justify-content:center; gap:15px; margin-bottom:1.5rem; flex-wrap:wrap;">
+            <button onclick="openModal('trackOrderModal')" style="padding:0.5rem 1rem; border-radius:12px; color:#fff; background:rgba(59,130,246,0.15); border:1px solid #3b82f6; cursor:pointer;">
+                <i class="fa-solid fa-truck-fast"></i> بەدواداچوونی داواکاری (Track Order)
+            </button>
+            <a href="https://wa.me/9647507285645" target="_blank" style="padding:0.5rem 1rem; border-radius:12px; color:#fff; text-decoration:none; background:rgba(37,211,102,0.15); border:1px solid var(--whatsapp-green);">
+                <i class="fa-brands fa-whatsapp"></i> پەیوەندی واتس ئاپ
+            </a>
+            <a href="https://discord.gg/Rp4qgeRGCt" target="_blank" style="padding:0.5rem 1rem; border-radius:12px; color:#fff; text-decoration:none; background:rgba(88,101,242,0.15); border:1px solid var(--discord-blurple);">
+                <i class="fa-brands fa-discord"></i> دیسکۆرد (Discord)
+            </a>
+        </div>
+        <p style="font-size:0.75rem; color:var(--text-muted);">© Base Store. All rights reserved. • <span style="color:#4ade80;">● Online Firebase Connected</span></p>
+    </footer>
+
+    <nav class="bottom-nav">
+        <button class="nav-item active" onclick="setQuickFilter('all')"><i class="fa-solid fa-house"></i><span>HOME</span></button>
+        <button class="nav-item" onclick="openSidebar('browseSidebar')"><i class="fa-solid fa-border-all"></i><span>BROWSE</span></button>
+        <button class="nav-item" onclick="openSidebar('wishlistSidebar')"><i class="fa-solid fa-heart"></i><span>WISH (<span id="wish-count">0</span>)</span></button>
+        <button class="nav-item" onclick="openSidebar('cartDrawer')"><i class="fa-solid fa-cart-shopping"></i><span>CART (<span id="cart-count">0</span>)</span></button>
+    </nav>
+
+    <!-- Sidebars -->
+    <div class="sidebar" id="browseSidebar" style="right: -100%; left: auto;">
+        <div class="sidebar-header">
+            <h3>هەموو بەشەکان (Base Store)</h3>
+            <button onclick="closeSidebars()" style="background:none; border:none; color:#fff; font-size:1.2rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="sidebar-body" id="browseSidebarList"></div>
+    </div>
+
+    <div class="sidebar" id="wishlistSidebar" style="right: -100%; left: auto;">
+        <div class="sidebar-header">
+            <h3>لیستی دڵخوازەکان (Wishlist)</h3>
+            <button onclick="closeSidebars()" style="background:none; border:none; color:#fff; font-size:1.2rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="sidebar-body" id="wishlistItemsContainer"></div>
+    </div>
+
+    <div class="sidebar" id="cartDrawer" style="right: -100%; left: auto;">
+        <div class="sidebar-header">
+            <h3>سەبەتەی کڕین</h3>
+            <button onclick="closeSidebars()" style="background:none; border:none; color:#fff; font-size:1.2rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="sidebar-body" id="cartItemsContainer"></div>
+        <div style="padding:1rem; background:rgba(0,0,0,0.5); border-top:1px solid var(--border-color);">
+            
+            <div style="background: rgba(37,211,102,0.15); border: 1px solid var(--whatsapp-green); padding: 0.8rem; border-radius: 12px; margin-bottom: 1rem; text-align: center;">
+                <span style="font-size:0.8rem; color:#aaa; display:block;">ژمارەی حیسابی FIB / FastPay / QiCard:</span>
+                <strong style="font-size:1.2rem; color:#4ade80; letter-spacing:1px;">07507285645</strong>
+            </div>
+
+            <div style="display:flex; gap:6px; margin-bottom:0.8rem;">
+                <input type="text" id="promoCodeInput" placeholder="کۆدی داشکاندن (نموونە: BASE10)" style="flex:1; padding:0.5rem; background:rgba(0,0,0,0.3); border:1px solid var(--border-color); color:#fff; border-radius:8px; font-size:0.8rem;">
+                <button onclick="applyPromoCode()" style="background:var(--burgundy-light); border:none; color:#fff; padding:0.5rem 0.8rem; border-radius:8px; font-weight:bold; cursor:pointer; font-size:0.8rem;">دابەزاندن</button>
+            </div>
+            <div id="promoMessage" style="font-size:0.75rem; margin-bottom:0.5rem;"></div>
+
+            <div style="display:flex; justify-content:space-between; font-weight:bold; margin-bottom:0.6rem;">
+                <span>کۆی گشتی:</span>
+                <span id="totalAmount">0 IQD</span>
+            </div>
+
+            <div class="admin-form-group">
+                <label>ڕێگەی دانی پارە:</label>
+                <select id="paymentMethodSelect">
+                    <option value="FIB">FIB (ئێف ئای بی)</option>
+                    <option value="FastPay">FastPay (فاست پەی)</option>
+                    <option value="Qi Card">Qi Card (کیو ئای کارت)</option>
+                </select>
+            </div>
+
+            <div class="admin-form-group">
+                <label>ئایدی یاریزان یان ژمارەی ئەکاونت (Player ID / Email):</label>
+                <input type="text" id="playerGameIdInput" placeholder="بۆ نموونە: 5123456789 یان ئەکاونت">
+            </div>
+
+            <input type="text" id="custName" placeholder="ناو و پاشناو" style="width:100%; padding:0.6rem; margin-bottom:0.5rem; background:rgba(0,0,0,0.3); border:1px solid var(--border-color); color:#fff; border-radius:8px;">
+            <input type="tel" id="custPhone" placeholder="ژمارەی مۆبایل (بۆ بەدواداچوونی داواکاری)" style="width:100%; padding:0.6rem; margin-bottom:0.8rem; background:rgba(0,0,0,0.3); border:1px solid var(--border-color); color:#fff; border-radius:8px;">
+            <button onclick="sendOrderToWhatsApp()" style="width:100%; background:var(--whatsapp-green); color:#000; border:none; padding:0.8rem; border-radius:10px; font-weight:bold; cursor:pointer;">
+                <i class="fa-brands fa-whatsapp"></i> ناردنی داواکاری بۆ واتسئاپ
+            </button>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal" id="authModal">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <button onclick="closeModal('authModal')" style="position:absolute; top:15px; left:15px; background:none; border:none; color:#fff; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+            <div style="font-size:2.5rem; color:#ff2a4b; margin-bottom:10px;"><i class="fa-solid fa-shield-cat"></i></div>
+            <h3>بەستنەوەی ئەکاونت / چوونەژوورەوە</h3>
+            <p style="font-size:0.8rem; color:#aaa; margin:10px 0 20px 0;">بۆ ئەوەی داتاکانت (دڵخوازەکانت) هەمیشە لەگەڵت بمێنن، بە ئەکاونتەکەت بچۆ ژوورەوە:</p>
+            
+            <button onclick="loginWithDiscord()" style="width:100%; background:var(--discord-blurple); color:#fff; border:none; padding:0.8rem; border-radius:12px; font-weight:bold; cursor:pointer; margin-bottom:10px; display:flex; align-items:center; justify-content:center; gap:8px;">
+                <i class="fa-brands fa-discord"></i> بەستنەوە بە دیسکۆرد (Discord)
+            </button>
+            
+            <div style="margin:15px 0; color:#666; font-size:0.8rem;">یان بە ئیمەیڵ و ژمارە</div>
+            
+            <div class="admin-form-group" style="text-align: right;">
+                <label>ئیمەیڵ یان ژمارەی مۆبایل:</label>
+                <input type="text" id="userEmailOrPhone" placeholder="example@gmail.com یان 0750...">
+            </div>
+            <button onclick="loginWithEmailPhone()" class="admin-submit-btn">چوونەژوورەوەی خێرا</button>
+            <div id="logoutSection" style="margin-top:15px; display:none;">
+                <button onclick="logoutUser()" style="background:#ef4444; color:#fff; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-size:0.8rem;">دەرچوون لە ئەکاونت (Logout)</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="currencyModal">
+        <div class="modal-content">
+            <h3 style="margin-bottom:1rem;">Currency / دراو</h3>
+            <select id="currencySelect" onchange="changeCurrency(this.value)">
+                <option value="IQD">IQD | دیناری عێراقی</option>
+                <option value="USD">USD | دۆلار</option>
+            </select>
+            <button onclick="closeModal('currencyModal')" class="admin-submit-btn" style="margin-top:1rem;">داخستن</button>
+        </div>
+    </div>
+
+    <div class="modal" id="trackOrderModal">
+        <div class="modal-content">
+            <button onclick="closeModal('trackOrderModal')" style="position:absolute; top:15px; left:15px; background:none; border:none; color:#fff; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+            <h3><i class="fa-solid fa-truck-fast"></i> بەدواداچوونی داواکاری</h3>
+            <p style="font-size:0.8rem; color:#aaa; margin-top:5px;">ژمارەی مۆبایلەکەت بنووسە بۆ زانینی دۆخی داواکارییەکەت:</p>
+            <div class="admin-form-group" style="margin-top:1rem;">
+                <label>ژمارەی مۆبایل:</label>
+                <input type="tel" id="trackPhoneInput" placeholder="0750xxxxxxx">
+            </div>
+            <button onclick="trackOrder()" class="admin-submit-btn">پشکنین</button>
+            <div id="trackResultContainer" style="margin-top:1rem;"></div>
+        </div>
+    </div>
+
+    <div class="modal" id="secretAdminModal">
+        <div class="modal-content">
+            <h3>Super Admin Access</h3>
+            <div class="admin-form-group" style="margin-top:1rem;">
+                <input type="password" id="adminP
